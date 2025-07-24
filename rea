@@ -1,0 +1,7 @@
+git clone https://github.com/joachimaross/joachimazeeky.git
+cd joachimazeeky
+
+# Copy all the artifact contents to appropriate files
+# package.json → package.json
+# README.md → README.md
+# etc.
