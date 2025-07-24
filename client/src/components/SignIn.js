@@ -1,6 +1,11 @@
 import React, { useState } from 'react';
-import { auth } from '../firebase';
-import firebase from 'firebase/app';
+import { auth } from '../firebase-config';
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider
+} from 'firebase/auth';
 import { FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
 
 const SignIn = () => {
@@ -12,11 +17,16 @@ const SignIn = () => {
   const [error, setError] = useState('');
 
   const signInWithGoogle = async () => {
+    if (!auth) {
+      setError('Authentication service not available. Please check your Firebase configuration.');
+      return;
+    }
+
     try {
       setLoading(true);
       setError('');
-      const provider = new firebase.auth.GoogleAuthProvider();
-      await auth.signInWithPopup(provider);
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
     } catch (error) {
       setError(error.message);
     } finally {
@@ -29,15 +39,20 @@ const SignIn = () => {
       setError('Please fill in all fields');
       return;
     }
+
+    if (!auth) {
+      setError('Authentication service not available. Please check your Firebase configuration.');
+      return;
+    }
     
     try {
       setLoading(true);
       setError('');
       
       if (isSignUp) {
-        await auth.createUserWithEmailAndPassword(email, password);
+        await createUserWithEmailAndPassword(auth, email, password);
       } else {
-        await auth.signInWithEmailAndPassword(email, password);
+        await signInWithEmailAndPassword(auth, email, password);
       }
     } catch (error) {
       setError(error.message);

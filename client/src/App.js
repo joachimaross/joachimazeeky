@@ -6,7 +6,7 @@ import SignIn from './components/SignIn';
 import ChatBar from './components/ChatBar';
 import ConversationDisplay from './components/ConversationDisplay';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth } from './firebase';
+import { auth } from './firebase-config';
 import { motion, AnimatePresence } from 'framer-motion';
 
 function App() {
