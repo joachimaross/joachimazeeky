@@ -1,0 +1,45 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users can read and write their own data
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // User conversations and memories
+    match /conversations/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // User tasks and productivity data
+    match /productivity/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // User music and generated content
+    match /music/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Business CRM data (authenticated users)
+    match /business/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Public content (read-only for authenticated users)
+    match /public/{document=**} {
+      allow read: if request.auth != null;
+      allow write: if false; // Only admin can write public content
+    }
+    
+    // Analytics and system data (admin only)
+    match /analytics/{document=**} {
+      allow read, write: if false; // Only backend can access
+    }
+    
+    // Default deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
