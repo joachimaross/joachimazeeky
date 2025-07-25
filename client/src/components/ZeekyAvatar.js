@@ -118,11 +118,50 @@ const ZeekyAvatar = ({ isListening, isSpeaking, emotion = 'neutral', message = '
     return () => clearInterval(blinkInterval);
   }, []);
 
-  // Face detection loop
+  // Optimized face detection with performance controls
   useEffect(() => {
-    const interval = setInterval(detectFace, 100);
-    return () => clearInterval(interval);
-  }, [detectFace]);
+    let rafId;
+    let isDetecting = false;
+    let lastDetectionTime = 0;
+    const DETECTION_INTERVAL = 333; // ~3 FPS instead of 10 FPS
+    
+    const performDetection = async () => {
+      const now = Date.now();
+      
+      // Skip if already detecting or too soon since last detection
+      if (isDetecting || (now - lastDetectionTime) < DETECTION_INTERVAL) {
+        scheduleNext();
+        return;
+      }
+      
+      isDetecting = true;
+      lastDetectionTime = now;
+      
+      try {
+        await detectFace();
+      } catch (error) {
+        console.warn('Face detection error:', error);
+      } finally {
+        isDetecting = false;
+        scheduleNext();
+      }
+    };
+    
+    const scheduleNext = () => {
+      rafId = requestAnimationFrame(performDetection);
+    };
+    
+    // Only start detection if avatar is active (listening or speaking)
+    if ((isListening || isSpeaking) && model) {
+      scheduleNext();
+    }
+    
+    return () => {
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
+    };
+  }, [detectFace, isListening, isSpeaking, model]);
 
   // Draw avatar on canvas
   useEffect(() => {
