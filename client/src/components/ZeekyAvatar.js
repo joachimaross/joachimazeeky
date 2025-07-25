@@ -118,50 +118,192 @@ const ZeekyAvatar = ({ isListening, isSpeaking, emotion = 'neutral', message = '
     return () => clearInterval(blinkInterval);
   }, []);
 
-  // Optimized face detection with performance controls
+  // Web Worker-based face detection for optimal performance
   useEffect(() => {
-    let rafId;
+    let worker = null;
+    let rafId = null;
     let isDetecting = false;
-    let lastDetectionTime = 0;
-    const DETECTION_INTERVAL = 333; // ~3 FPS instead of 10 FPS
-    
-    const performDetection = async () => {
-      const now = Date.now();
-      
-      // Skip if already detecting or too soon since last detection
-      if (isDetecting || (now - lastDetectionTime) < DETECTION_INTERVAL) {
-        scheduleNext();
-        return;
-      }
-      
-      isDetecting = true;
-      lastDetectionTime = now;
-      
+    let frameId = 0;
+    const DETECTION_INTERVAL = 200; // 5 FPS for better performance
+
+    // Initialize Web Worker
+    const initWorker = () => {
       try {
-        await detectFace();
+        worker = new Worker(new URL('../workers/faceDetectionWorker.js', import.meta.url));
+        
+        worker.onmessage = (event) => {
+          const { type, data } = event.data;
+          
+          switch (type) {
+            case 'WORKER_READY':
+              console.log('Face detection worker ready');
+              worker.postMessage({ type: 'INIT' });
+              break;
+              
+            case 'MODEL_LOADED':
+              if (data.success) {
+                console.log('Face detection model loaded in worker');
+                startDetection();
+              } else {
+                console.error('Failed to load model:', data.error);
+              }
+              break;
+              
+            case 'FACES_DETECTED':
+              handleFaceDetectionResult(data);
+              isDetecting = false;
+              break;
+              
+            case 'ERROR':
+              console.error('Worker error:', data.error);
+              isDetecting = false;
+              break;
+          }
+        };
+        
+        worker.onerror = (error) => {
+          console.error('Face detection worker error:', error);
+          isDetecting = false;
+        };
+        
       } catch (error) {
-        console.warn('Face detection error:', error);
-      } finally {
-        isDetecting = false;
-        scheduleNext();
+        console.warn('Web Workers not supported, falling back to main thread:', error);
+        // Fallback to original detection method
+        startMainThreadDetection();
       }
     };
-    
-    const scheduleNext = () => {
+
+    const handleFaceDetectionResult = (result) => {
+      if (result.faces && result.faces.length > 0) {
+        const primaryFace = result.faces[0];
+        
+        // Update avatar state based on face detection
+        if (primaryFace.landmarks) {
+          updateFaceTracking(primaryFace);
+        }
+        
+        // Performance monitoring
+        if (result.performance) {
+          // Only log performance issues if FPS drops significantly
+          if (result.performance.averageFPS < 2) {
+            console.warn('Face detection performance degraded:', result.performance);
+          }
+        }
+      }
+    };
+
+    const updateFaceTracking = (face) => {
+      // Update avatar eye tracking and head position
+      const centerX = face.bbox.x + face.bbox.width / 2;
+      const centerY = face.bbox.y + face.bbox.height / 2;
+      
+      // Smooth interpolation for natural movement
+      setFacePosition(prev => ({
+        x: prev ? lerp(prev.x, centerX, 0.3) : centerX,
+        y: prev ? lerp(prev.y, centerY, 0.3) : centerY,
+        confidence: face.confidence
+      }));
+    };
+
+    const lerp = (start, end, factor) => {
+      return start + (end - start) * factor;
+    };
+
+    const startDetection = () => {
+      if (!worker || isDetecting) return;
+      
+      let lastDetectionTime = 0;
+      
+      const performDetection = () => {
+        const now = performance.now();
+        
+        if (now - lastDetectionTime < DETECTION_INTERVAL || isDetecting) {
+          rafId = requestAnimationFrame(performDetection);
+          return;
+        }
+        
+        if (videoRef.current && (isListening || isSpeaking)) {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          const video = videoRef.current;
+          
+          if (video.videoWidth > 0 && video.videoHeight > 0) {
+            canvas.width = 320; // Reduced resolution for performance
+            canvas.height = 240;
+            
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            
+            isDetecting = true;
+            lastDetectionTime = now;
+            frameId++;
+            
+            worker.postMessage({
+              type: 'DETECT_FACES',
+              data: {
+                imageData: imageData.data,
+                width: canvas.width,
+                height: canvas.height,
+                frameId
+              }
+            });
+          }
+        }
+        
+        rafId = requestAnimationFrame(performDetection);
+      };
+      
       rafId = requestAnimationFrame(performDetection);
     };
-    
-    // Only start detection if avatar is active (listening or speaking)
-    if ((isListening || isSpeaking) && model) {
-      scheduleNext();
+
+    const startMainThreadDetection = () => {
+      // Fallback to original detection method with throttling
+      let lastDetectionTime = 0;
+      
+      const performDetection = async () => {
+        const now = performance.now();
+        
+        if (now - lastDetectionTime < DETECTION_INTERVAL || isDetecting) {
+          rafId = requestAnimationFrame(performDetection);
+          return;
+        }
+        
+        if (model && (isListening || isSpeaking)) {
+          isDetecting = true;
+          lastDetectionTime = now;
+          
+          try {
+            await detectFace();
+          } catch (error) {
+            console.warn('Main thread face detection error:', error);
+          } finally {
+            isDetecting = false;
+          }
+        }
+        
+        rafId = requestAnimationFrame(performDetection);
+      };
+      
+      if (model) {
+        rafId = requestAnimationFrame(performDetection);
+      }
+    };
+
+    // Initialize detection system
+    if (isListening || isSpeaking) {
+      initWorker();
     }
-    
+
     return () => {
       if (rafId) {
         cancelAnimationFrame(rafId);
       }
+      if (worker) {
+        worker.postMessage({ type: 'CLEANUP' });
+        worker.terminate();
+      }
     };
-  }, [detectFace, isListening, isSpeaking, model]);
+  }, [isListening, isSpeaking, model]);
 
   // Draw avatar on canvas
   useEffect(() => {
