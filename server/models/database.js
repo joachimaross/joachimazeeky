@@ -174,6 +174,19 @@ class DatabaseManager {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
+      -- User integrations table for calendar and other services
+      CREATE TABLE IF NOT EXISTS user_integrations (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        provider VARCHAR(50) NOT NULL,
+        access_token TEXT,
+        refresh_token TEXT,
+        expires_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, provider)
+      );
+
       -- Create indexes for better performance
       CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
       CREATE INDEX IF NOT EXISTS idx_users_firebase_uid ON users(firebase_uid);
@@ -187,6 +200,8 @@ class DatabaseManager {
       CREATE INDEX IF NOT EXISTS idx_appointments_date ON appointments(scheduled_date);
       CREATE INDEX IF NOT EXISTS idx_usage_analytics_user_id ON usage_analytics(user_id);
       CREATE INDEX IF NOT EXISTS idx_usage_analytics_created_at ON usage_analytics(created_at);
+      CREATE INDEX IF NOT EXISTS idx_user_integrations_user_id ON user_integrations(user_id);
+      CREATE INDEX IF NOT EXISTS idx_user_integrations_provider ON user_integrations(provider);
 
       -- Enable Row Level Security
       ALTER TABLE users ENABLE ROW LEVEL SECURITY;

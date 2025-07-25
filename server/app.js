@@ -3,9 +3,16 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const NodeCache = require('node-cache');
+const http = require('http');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
+// Import custom modules
+const database = require('./models/database');
+const ZeekyWebSocketServer = require('./websocket');
+
 const app = express();
+const server = http.createServer(app);
 const PORT = process.env.PORT || 3001;
 
 // Initialize cache (TTL: 5 minutes)
@@ -60,27 +67,53 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Apply general rate limiting
 app.use('/api/', generalLimiter);
 
-// Middleware to validate user authentication
-const validateAuth = (req, res, next) => {
-  const userId = req.headers['x-user-id'];
-  const authToken = req.headers['authorization'];
-  
-  if (!userId || !authToken) {
-    return res.status(401).json({ 
-      error: 'Authentication required',
-      code: 'AUTH_MISSING'
+// Enhanced authentication middleware with JWT support
+const validateAuth = async (req, res, next) => {
+  try {
+    const authHeader = req.headers['authorization'];
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ 
+        error: 'Authentication required',
+        code: 'AUTH_MISSING'
+      });
+    }
+    
+    const token = authHeader.split(' ')[1];
+    
+    // Verify JWT token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    // Get user from database
+    const user = await database.getUserById(decoded.userId);
+    if (!user) {
+      return res.status(401).json({
+        error: 'User not found',
+        code: 'USER_NOT_FOUND'
+      });
+    }
+    
+    // Update last active timestamp
+    await database.pgPool.query(
+      'UPDATE users SET last_active = CURRENT_TIMESTAMP WHERE id = $1',
+      [user.id]
+    );
+    
+    req.user = {
+      userId: user.id,
+      email: user.email,
+      username: user.username,
+      subscriptionTier: user.subscription_tier
+    };
+    
+    next();
+  } catch (error) {
+    console.error('Authentication error:', error);
+    return res.status(401).json({
+      error: 'Invalid token',
+      code: 'AUTH_INVALID'
     });
   }
-  
-  // In production, validate the Firebase token here
-  if (process.env.NODE_ENV === 'production') {
-    // TODO: Implement Firebase Admin SDK token verification
-    // const admin = require('firebase-admin');
-    // await admin.auth().verifyIdToken(authToken);
-  }
-  
-  req.userId = userId;
-  next();
 };
 
 // Cache middleware
@@ -124,16 +157,32 @@ app.get('/health', (req, res) => {
 // Import route modules
 const aiRoutes = require('./routes/ai');
 const musicRoutes = require('./routes/music');
-const visionRoutes = require('./routes/vision');
-const integrationRoutes = require('./routes/integrations');
-const analyticsRoutes = require('./routes/analytics');
+const fileRoutes = require('./routes/files');
+const voiceRoutes = require('./routes/voice');
+const calendarRoutes = require('./routes/calendar');
 
 // Apply authentication to protected routes
 app.use('/api/ai', validateAuth, aiLimiter, cacheMiddleware(180), aiRoutes);
 app.use('/api/music', validateAuth, musicLimiter, cacheMiddleware(3600), musicRoutes);
-app.use('/api/vision', validateAuth, aiLimiter, cacheMiddleware(60), visionRoutes);
-app.use('/api/integrations', validateAuth, integrationRoutes);
-app.use('/api/analytics', validateAuth, analyticsRoutes);
+app.use('/api/files', validateAuth, fileRoutes);
+app.use('/api/voice', validateAuth, voiceRoutes);
+app.use('/api/calendar', validateAuth, calendarRoutes);
+
+// Database health check endpoint
+app.get('/api/health/database', async (req, res) => {
+  try {
+    const health = await database.healthCheck();
+    res.json({
+      success: true,
+      data: health
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
 
 // Error handling middleware
 app.use((error, req, res, next) => {
@@ -191,19 +240,49 @@ app.use('*', (req, res) => {
   });
 });
 
+// Initialize WebSocket server
+const wsServer = new ZeekyWebSocketServer(server);
+
+// Start heartbeat for WebSocket connections
+wsServer.startHeartbeat();
+
 // Graceful shutdown
-process.on('SIGTERM', () => {
+process.on('SIGTERM', async () => {
   console.log('SIGTERM received, shutting down gracefully');
+  
+  // Close WebSocket connections
+  wsServer.close();
+  
+  // Close database connections
+  await database.close();
+  
   server.close(() => {
     console.log('Server closed');
     process.exit(0);
   });
 });
 
-const server = app.listen(PORT, () => {
-  console.log(`🚀 Zeeky AI Backend Server running on port ${PORT}`);
-  console.log(`🔒 Security: ${process.env.NODE_ENV === 'production' ? 'Production' : 'Development'} mode`);
-  console.log(`📊 Cache: TTL ${cache.options.stdTTL}s, Check period ${cache.options.checkperiod}s`);
+process.on('SIGINT', async () => {
+  console.log('SIGINT received, shutting down gracefully');
+  
+  wsServer.close();
+  await database.close();
+  
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
 });
 
-module.exports = app;
+// Start server
+server.listen(PORT, () => {
+  console.log(`🚀 Zeeky AI Backend Server running on port ${PORT}`);
+  console.log(`🔒 Security: ${process.env.NODE_ENV === 'production' ? 'Production' : 'Development'} mode`);
+  console.log(`📊 Cache: TTL ${cache.options.stdTTL}s`);
+  console.log(`🌐 WebSocket: Real-time communication enabled`);
+  console.log(`💾 Database: PostgreSQL + Redis integration active`);
+  console.log(`📁 File Processing: Multi-format support enabled`);
+  console.log(`🎤 Voice Cloning: Advanced synthesis capabilities`);
+});
+
+module.exports = { app, server, wsServer, database };
