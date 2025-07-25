@@ -89,13 +89,18 @@ const ChatBar = ({ onMessageSent, onAvatarStateChange }) => {
         });
       }
 
-      // Get AI response
-      const response = await ZeekyAI.generateResponse(messageToSend);
+      // Get AI response with timeout
+      const response = await Promise.race([
+        ZeekyAI.generateResponse(messageToSend),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Request timeout')), 30000)
+        )
+      ]);
       
       // Update avatar with response emotion
       if (onAvatarStateChange) {
         onAvatarStateChange({ 
-          emotion: response.emotion,
+          emotion: response.emotion || 'happy',
           isProcessing: false 
         });
       }
@@ -111,8 +116,14 @@ const ChatBar = ({ onMessageSent, onAvatarStateChange }) => {
         });
       }
 
-      // Speak the response
-      await VoiceService.speak(response.text);
+      // Speak the response with error handling
+      if (response.text) {
+        try {
+          await VoiceService.speak(response.text);
+        } catch (voiceError) {
+          console.warn('Voice synthesis failed:', voiceError);
+        }
+      }
 
     } catch (error) {
       console.error('Error sending message:', error);
@@ -124,9 +135,13 @@ const ChatBar = ({ onMessageSent, onAvatarStateChange }) => {
         });
       }
 
+      const errorMessage = error.message === 'Request timeout' 
+        ? "I'm taking a bit longer than usual. Could you try asking again?"
+        : "I'm having trouble right now, but I'm here to help! Could you try asking again?";
+
       if (onMessageSent) {
         onMessageSent({
-          text: "I'm having trouble right now, but I'm here to help! Could you try asking again?",
+          text: errorMessage,
           timestamp: Date.now(),
           type: 'assistant',
           error: true
@@ -166,6 +181,98 @@ const ChatBar = ({ onMessageSent, onAvatarStateChange }) => {
 
   const handleImageUpload = () => {
     imageInputRef.current?.click();
+  };
+
+  const handleCameraCapture = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'user' },
+        audio: false 
+      });
+      
+      // Create a video element to capture the stream
+      const video = document.createElement('video');
+      video.srcObject = stream;
+      video.play();
+      
+      // Wait for video to load
+      video.onloadedmetadata = () => {
+        // Create canvas to capture frame
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        
+        // Draw video frame to canvas
+        ctx.drawImage(video, 0, 0);
+        
+        // Convert to blob and create file
+        canvas.toBlob((blob) => {
+          const file = new File([blob], `camera-capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
+          handleFileProcessing([file]);
+          
+          // Stop the stream
+          stream.getTracks().forEach(track => track.stop());
+        }, 'image/jpeg', 0.9);
+      };
+    } catch (error) {
+      console.error('Error accessing camera:', error);
+      alert('Unable to access camera. Please check your permissions.');
+    }
+  };
+
+  const handleFileProcessing = async (files) => {
+    // Process uploaded files
+    for (const file of files) {
+      if (file.type.startsWith('image/')) {
+        // Handle image files
+        const imageUrl = URL.createObjectURL(file);
+        if (onMessageSent) {
+          onMessageSent({
+            text: `[Image uploaded: ${file.name}]`,
+            timestamp: Date.now(),
+            type: 'user',
+            attachment: {
+              type: 'image',
+              url: imageUrl,
+              name: file.name,
+              size: file.size
+            }
+          });
+        }
+      } else if (file.type.startsWith('audio/')) {
+        // Handle audio files
+        const audioUrl = URL.createObjectURL(file);
+        if (onMessageSent) {
+          onMessageSent({
+            text: `[Audio uploaded: ${file.name}]`,
+            timestamp: Date.now(),
+            type: 'user',
+            attachment: {
+              type: 'audio',
+              url: audioUrl,
+              name: file.name,
+              size: file.size
+            }
+          });
+        }
+      } else {
+        // Handle other file types
+        if (onMessageSent) {
+          onMessageSent({
+            text: `[File uploaded: ${file.name}]`,
+            timestamp: Date.now(),
+            type: 'user',
+            attachment: {
+              type: 'file',
+              name: file.name,
+              size: file.size,
+              mimeType: file.type
+            }
+          });
+        }
+      }
+    }
   };
 
   const handlePersonaChange = (personaId) => {
@@ -256,7 +363,7 @@ const ChatBar = ({ onMessageSent, onAvatarStateChange }) => {
 
         {/* Camera */}
         <button
-          onClick={() => console.log('Camera capture')}
+          onClick={handleCameraCapture}
           className="flex-shrink-0 p-2 text-gray-500 hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
           title="Take photo"
         >
@@ -272,6 +379,7 @@ const ChatBar = ({ onMessageSent, onAvatarStateChange }) => {
             onKeyDown={handleKeyDown}
             placeholder={isProcessing ? "Zeeky is thinking..." : "Ask Zeeky anything..."}
             disabled={isProcessing}
+            aria-label="Chat message input"
             className="w-full min-h-[44px] max-h-[120px] px-4 py-3 pr-12 border border-gray-300 dark:border-gray-600 rounded-full bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none disabled:opacity-50"
             style={{ height: '44px' }}
           />
@@ -332,9 +440,11 @@ const ChatBar = ({ onMessageSent, onAvatarStateChange }) => {
         multiple
         className="hidden"
         onChange={(e) => {
-          // Handle file uploads
           const files = Array.from(e.target.files);
-          console.log('Files uploaded:', files);
+          if (files.length > 0) {
+            handleFileProcessing(files);
+          }
+          e.target.value = ''; // Reset input
         }}
       />
       
@@ -344,9 +454,11 @@ const ChatBar = ({ onMessageSent, onAvatarStateChange }) => {
         accept="image/*"
         className="hidden"
         onChange={(e) => {
-          // Handle image uploads
           const files = Array.from(e.target.files);
-          console.log('Images uploaded:', files);
+          if (files.length > 0) {
+            handleFileProcessing(files);
+          }
+          e.target.value = ''; // Reset input
         }}
       />
     </div>

@@ -18,21 +18,27 @@ import {
   FiCompass
 } from 'react-icons/fi';
 
-const Sidebar = ({ onToggle, onThemeToggle, darkMode }) => {
+const Sidebar = ({ onToggle, onThemeToggle, darkMode, onNavigate, activeSection }) => {
   const menuItems = [
-    { icon: FiMessageCircle, label: 'AI Chat', active: true },
-    { icon: FiMusic, label: 'Music Lab' },
-    { icon: FiVideo, label: 'Video Lab' },
-    { icon: FiCalendar, label: 'Calendar' },
-    { icon: FiFileText, label: 'Notes & Tasks' },
-    { icon: FiRss, label: 'News/Live Feeds' },
-    { icon: FiBriefcase, label: 'Business Tools' },
-    { icon: FiTrendingUp, label: 'Fitness Tracker' },
-    { icon: FiMapPin, label: 'Maps & Travel' },
-    { icon: FiShoppingCart, label: 'Shopping Assistant' },
-    { icon: FiCompass, label: 'Survival Guide' },
-    { icon: FiSettings, label: 'Settings' },
+    { icon: FiMessageCircle, label: 'AI Chat', id: 'chat', active: activeSection === 'chat' },
+    { icon: FiMusic, label: 'Music Lab', id: 'music', active: activeSection === 'music' },
+    { icon: FiVideo, label: 'Video Lab', id: 'video', active: activeSection === 'video' },
+    { icon: FiCalendar, label: 'Calendar', id: 'calendar', active: activeSection === 'calendar' },
+    { icon: FiFileText, label: 'Notes & Tasks', id: 'notes', active: activeSection === 'notes' },
+    { icon: FiRss, label: 'News/Live Feeds', id: 'news', active: activeSection === 'news' },
+    { icon: FiBriefcase, label: 'Business Tools', id: 'business', active: activeSection === 'business' },
+    { icon: FiTrendingUp, label: 'Fitness Tracker', id: 'fitness', active: activeSection === 'fitness' },
+    { icon: FiMapPin, label: 'Maps & Travel', id: 'maps', active: activeSection === 'maps' },
+    { icon: FiShoppingCart, label: 'Shopping Assistant', id: 'shopping', active: activeSection === 'shopping' },
+    { icon: FiCompass, label: 'Survival Guide', id: 'survival', active: activeSection === 'survival' },
+    { icon: FiSettings, label: 'Settings', id: 'settings', active: activeSection === 'settings' },
   ];
+
+  const handleNavigation = (sectionId) => {
+    if (onNavigate) {
+      onNavigate(sectionId);
+    }
+  };
 
   return (
     <div className="w-72 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col transition-colors">
