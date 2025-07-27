@@ -1,0 +1,166 @@
+# 🌐 Netlify Production Configuration for Zeeky AI
+# Optimized build settings and redirects for React SPA
+
+[build]
+  # Build command and directory
+  command = "npm run build"
+  publish = "build"
+  
+  # Node.js version
+  environment = { NODE_VERSION = "18" }
+
+[build.processing]
+  # Skip processing for pre-compressed files
+  skip_processing = false
+
+[build.processing.css]
+  # Bundle CSS files
+  bundle = true
+  minify = true
+
+[build.processing.js]
+  # Bundle and minify JavaScript
+  bundle = true
+  minify = true
+
+[build.processing.html]
+  # Minify HTML
+  pretty_urls = true
+
+[build.processing.images]
+  # Optimize images
+  compress = true
+
+# 🔀 SPA Redirects - Critical for React Router
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# 🔒 Security Headers
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # Content Security Policy
+    Content-Security-Policy = '''
+      default-src 'self';
+      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://apis.google.com https://www.gstatic.com https://cdn.jsdelivr.net https://unpkg.com;
+      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net;
+      font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net;
+      img-src 'self' data: https: blob:;
+      connect-src 'self' https://*.googleapis.com https://*.google.com https://*.firebase.com https://*.firebaseio.com https://api.openai.com https://api.anthropic.com https://api.groq.com wss://*.firebase.com wss://*.firebaseio.com;
+      frame-src 'self' https://*.google.com https://*.firebase.com;
+      object-src 'none';
+      base-uri 'self';
+      form-action 'self';
+      upgrade-insecure-requests;
+    '''
+    
+    # Security Headers
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    X-XSS-Protection = "1; mode=block"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+    
+    # HSTS
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
+    
+    # Cache Control
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# 📦 Static Asset Caching
+[[headers]]
+  for = "/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "*.woff2"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "*.png"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "*.jpg"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "*.svg"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# 🔧 Service Worker
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# 📱 PWA Manifest
+[[headers]]
+  for = "/manifest.json"
+  [headers.values]
+    Content-Type = "application/manifest+json"
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# 🎯 API Endpoints
+[[headers]]
+  for = "/api/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Headers = "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+    Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
+
+# 🌐 Environment-specific settings
+[context.production]
+  environment = { NODE_ENV = "production" }
+
+[context.deploy-preview]
+  environment = { NODE_ENV = "development" }
+
+[context.branch-deploy]
+  environment = { NODE_ENV = "development" }
+
+# 🔌 Netlify Functions Configuration
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# 📊 Analytics & Performance
+[template.environment]
+  NETLIFY_DEPLOY_CONTEXT = "production"
+  NETLIFY_SITE_NAME = "zeekyai"
+
+# 🚀 Build Optimization
+[build.environment]
+  NPM_FLAGS = "--production=false"
+  YARN_FLAGS = "--production=false"
+  
+# Edge Functions (if needed)
+[[edge_functions]]
+  function = "auth-guard"
+  path = "/admin/*"
+
+# 🔄 Form Processing
+[forms]
+  # Contact forms will be automatically processed by Netlify

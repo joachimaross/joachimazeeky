@@ -1,0 +1,122 @@
+# 🔒 Netlify Security Headers for Zeeky AI
+# Comprehensive security configuration for production deployment
+
+# 🌟 Default headers for all pages
+/*
+  # Content Security Policy - Comprehensive protection
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://apis.google.com https://www.gstatic.com https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: https: blob:; connect-src 'self' https://*.googleapis.com https://*.google.com https://*.firebase.com https://*.firebaseio.com https://api.openai.com https://api.anthropic.com https://api.groq.com wss://*.firebase.com wss://*.firebaseio.com; frame-src 'self' https://*.google.com https://*.firebase.com; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;
+
+  # Security Headers
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  X-XSS-Protection: 1; mode=block
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+
+  # HSTS - Force HTTPS
+  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+
+  # Custom Zeeky AI Headers
+  X-Powered-By: Zeeky-AI-Platform
+  X-Deployment-Environment: production
+  X-Security-Level: enterprise
+
+  # Basic Cache Control
+  Cache-Control: public, max-age=0, must-revalidate
+
+# 📦 Static Assets - Long-term caching
+/static/*
+  Cache-Control: public, max-age=31536000, immutable
+  X-Content-Type-Options: nosniff
+
+# 🎨 JavaScript files
+*.js
+  Cache-Control: public, max-age=31536000, immutable
+  Content-Type: application/javascript
+
+# 🎨 CSS files
+*.css
+  Cache-Control: public, max-age=31536000, immutable
+  Content-Type: text/css
+
+# 🖼️ Images
+*.png
+  Cache-Control: public, max-age=31536000, immutable
+  Content-Type: image/png
+
+*.jpg
+  Cache-Control: public, max-age=31536000, immutable
+  Content-Type: image/jpeg
+
+*.svg
+  Cache-Control: public, max-age=31536000, immutable
+  Content-Type: image/svg+xml
+
+*.webp
+  Cache-Control: public, max-age=31536000, immutable
+  Content-Type: image/webp
+
+# 🔤 Fonts
+*.woff2
+  Cache-Control: public, max-age=31536000, immutable
+  Content-Type: font/woff2
+  Access-Control-Allow-Origin: *
+
+*.woff
+  Cache-Control: public, max-age=31536000, immutable
+  Content-Type: font/woff
+
+*.ttf
+  Cache-Control: public, max-age=31536000, immutable
+  Content-Type: font/ttf
+
+# 📱 PWA Files
+/manifest.json
+  Content-Type: application/manifest+json
+  Cache-Control: public, max-age=0, must-revalidate
+
+/sw.js
+  Content-Type: application/javascript
+  Cache-Control: public, max-age=0, must-revalidate
+
+# 🔧 Service Worker
+/service-worker.js
+  Content-Type: application/javascript
+  Cache-Control: public, max-age=0, must-revalidate
+
+# 🎯 API endpoints
+/api/*
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Headers: Origin, X-Requested-With, Content-Type, Accept, Authorization
+  Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+  Content-Type: application/json
+
+# 🔐 Admin routes - Extra security
+/admin/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+
+# 🏥 Health check
+/health
+  Cache-Control: no-cache, no-store, must-revalidate
+  Content-Type: application/json
+
+# 📊 Analytics & Tracking
+/analytics/*
+  X-Robots-Tag: noindex
+
+# 🔒 Security.txt
+/.well-known/security.txt
+  Content-Type: text/plain
+
+# 🤖 Robots.txt
+/robots.txt
+  Content-Type: text/plain
+  Cache-Control: public, max-age=86400
+
+# 🔍 Sitemap
+/sitemap.xml
+  Content-Type: application/xml
+  Cache-Control: public, max-age=86400

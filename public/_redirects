@@ -1,0 +1,40 @@
+# 🔀 Netlify Redirects for Zeeky AI React SPA
+# Essential for React Router client-side routing
+
+# API routes to Netlify Functions
+/api/*  /.netlify/functions/:splat  200
+
+# Admin area protection (if using Netlify Identity)
+/admin/*  /admin/index.html  200  Role=admin
+
+# Health check endpoint
+/health  /.netlify/functions/health  200
+
+# Firebase Functions fallback (if using hybrid deployment)
+/firebase/*  https://us-central1-zeeky-ai.cloudfunctions.net/:splat  200
+
+# PWA Service Worker
+/sw.js  /sw.js  200
+
+# Manifest file
+/manifest.json  /manifest.json  200
+
+# Static assets with cache busting
+/static/*  /static/:splat  200
+
+# Favicon redirects
+/favicon.ico  /favicon.ico  200
+/apple-touch-icon.png  /apple-touch-icon.png  200
+
+# SEO-friendly redirects
+/about  /  200
+/contact  /  200
+/pricing  /  200
+
+# Legacy URL redirects (if migrating from another platform)
+/old-app/*  /  301
+/legacy/*  /  301
+
+# Catch-all for React Router (MUST BE LAST)
+# This enables client-side routing for all other routes
+/*  /index.html  200
