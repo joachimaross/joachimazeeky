@@ -1,8 +1,8 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import Webcam from 'react-webcam';
-import * as tf from '@tensorflow/tfjs';
-import * as faceLandmarksDetection from '@tensorflow-models/face-landmarks-detection';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { Sphere, Box, Text } from '@react-three/drei';
+import * as THREE from 'three';
 
 const ZeekyAvatar = ({ isListening, isSpeaking, emotion = 'neutral', message = '' }) => {
   const canvasRef = useRef(null);

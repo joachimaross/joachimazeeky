@@ -1,20 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import Dashboard from './pages/Dashboard';
 import Sidebar from './components/Sidebar';
-import ZeekyAvatar from './components/ZeekyAvatar';
+import HologramAvatar from './components/HologramAvatar';
 import SignIn from './components/SignIn';
 import ChatBar from './components/ChatBar';
 import ConversationDisplay from './components/ConversationDisplay';
+import LoadingScreen from './components/LoadingScreen';
+import AdminDashboard from './components/AdminDashboard';
+import ErrorBoundary from './components/ErrorBoundary';
+import GlobalSearch from './components/GlobalSearch';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from './firebase-config';
 import { motion, AnimatePresence } from 'framer-motion';
+import { AdminService } from './services/AdminService';
+import { useGlobalSearch } from './hooks/useGlobalSearch';
 
 function App() {
-  const [user] = useAuthState(auth);
+  const [user, loading] = useAuthState(auth);
   const [darkMode, setDarkMode] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [currentView, setCurrentView] = useState('chat'); // 'dashboard' or 'chat'
+  const [currentView, setCurrentView] = useState('chat'); // 'dashboard', 'chat', or 'admin'
   const [messages, setMessages] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [avatarState, setAvatarState] = useState({
     emotion: 'neutral',
     isListening: false,
@@ -23,13 +31,55 @@ function App() {
     persona: 'default'
   });
 
-  // Initialize theme from localStorage
+  // Admin service instance
+  const adminService = new AdminService();
+  
+  // Global search hook
+  const { isSearchOpen, openSearch, closeSearch } = useGlobalSearch();
+
+  // Initialize app and check admin status
   useEffect(() => {
-    const savedTheme = localStorage.getItem('zeeky_theme');
-    if (savedTheme) {
-      setDarkMode(savedTheme === 'dark');
-    }
+    const initializeApp = async () => {
+      // Initialize theme from localStorage
+      const savedTheme = localStorage.getItem('zeeky_theme');
+      if (savedTheme) {
+        setDarkMode(savedTheme === 'dark');
+      }
+
+      // Simulate loading time for hologram initialization
+      setTimeout(() => {
+        setIsLoading(false);
+      }, 100); // Quick loading for testing, will show full animation
+    };
+
+    initializeApp();
   }, []);
+
+  // Check admin status when user changes
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (user) {
+        try {
+          const adminStatus = await adminService.checkAdminStatus(user);
+          setIsAdmin(adminStatus.isAdmin);
+          
+          // Auto-initialize admin if Joachima signs in
+          if (adminService.isAdminEmail(user.email) && !adminStatus.isInitialized) {
+            await adminService.initializeAdmin(user);
+            setIsAdmin(true);
+          }
+        } catch (error) {
+          console.error('Error checking admin status:', error);
+        }
+      } else {
+        setIsAdmin(false);
+      }
+    };
+
+    if (!loading) {
+      checkAdminStatus();
+    }
+  }, [user, loading]);
 
   // Save theme to localStorage
   useEffect(() => {
@@ -64,42 +114,74 @@ function App() {
     setCurrentView('dashboard');
   };
 
-  if (!user) {
-    return <SignIn />;
+  const switchToAdmin = () => {
+    if (isAdmin) {
+      setCurrentView('admin');
+    }
+  };
+
+  // Show loading screen first
+  if (isLoading) {
+    return (
+      <ErrorBoundary>
+        <LoadingScreen onLoadComplete={() => setIsLoading(false)} />
+      </ErrorBoundary>
+    );
+  }
+
+  // Show sign-in if not authenticated
+  if (!user && !loading) {
+    return (
+      <ErrorBoundary>
+        <SignIn />
+      </ErrorBoundary>
+    );
+  }
+
+  // Show loading if still checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-white text-xl">Authenticating...</div>
+      </div>
+    );
   }
 
   return (
-    <div className={`flex h-screen ${darkMode ? 'dark' : ''}`}>
-      <div className="flex flex-grow bg-gray-50 dark:bg-gray-900 transition-colors">
-        {/* Sidebar */}
-        <AnimatePresence>
-          {sidebarOpen && (
-            <motion.div
-              initial={{ x: -300 }}
-              animate={{ x: 0 }}
-              exit={{ x: -300 }}
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            >
-              <Sidebar 
-                onToggle={toggleSidebar} 
-                onThemeToggle={toggleTheme} 
-                darkMode={darkMode}
-                currentView={currentView}
-                onViewChange={(view) => setCurrentView(view)}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+    <ErrorBoundary>
+      <div className={`flex h-screen ${darkMode ? 'dark' : ''}`}>
+        <div className="flex flex-grow bg-gray-50 dark:bg-gray-900 transition-colors">
+          {/* Sidebar */}
+          <AnimatePresence>
+            {sidebarOpen && (
+              <motion.div
+                initial={{ x: -300 }}
+                animate={{ x: 0 }}
+                exit={{ x: -300 }}
+                transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              >
+                <Sidebar 
+                  onToggle={toggleSidebar} 
+                  onThemeToggle={toggleTheme} 
+                  darkMode={darkMode}
+                  currentView={currentView}
+                  onViewChange={(view) => setCurrentView(view)}
+                  isAdmin={isAdmin}
+                  user={user}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-        {/* Main Content Area */}
-        <div className="flex-1 flex flex-col relative">
-          {/* Holographic Avatar */}
-          <ZeekyAvatar
-            isListening={avatarState.isListening}
-            isSpeaking={avatarState.isSpeaking}
-            emotion={avatarState.emotion}
-            message={avatarState.currentMessage}
-          />
+          {/* Main Content Area */}
+          <div className="flex-1 flex flex-col relative">
+            {/* Holographic Avatar */}
+            <HologramAvatar
+              isListening={avatarState.isListening}
+              isSpeaking={avatarState.isSpeaking}
+              emotion={avatarState.emotion}
+              message={avatarState.currentMessage}
+            />
 
           {/* Header Bar */}
           <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg">
@@ -127,8 +209,20 @@ function App() {
               </div>
             </div>
 
-            {/* View Toggle Buttons */}
+            {/* Search and View Toggle Buttons */}
             <div className="flex items-center space-x-2">
+              {/* Search Button */}
+              <button
+                onClick={openSearch}
+                className="flex items-center space-x-2 px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                title="Search (⌘K)"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <span className="hidden md:inline text-sm">Search</span>
+              </button>
+              
               <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
                 <button
                   onClick={switchToChat}
@@ -150,6 +244,18 @@ function App() {
                 >
                   📊 Dashboard
                 </button>
+                {isAdmin && (
+                  <button
+                    onClick={switchToAdmin}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                      currentView === 'admin'
+                        ? 'bg-gradient-to-r from-red-500 to-purple-600 text-white shadow-sm'
+                        : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                    }`}
+                  >
+                    🛡️ Admin
+                  </button>
+                )}
               </div>
 
               {/* Sign Out Button */}
@@ -179,7 +285,7 @@ function App() {
                   onAvatarStateChange={handleAvatarStateChange}
                 />
               </motion.div>
-            ) : (
+            ) : currentView === 'dashboard' ? (
               <motion.div
                 key="dashboard"
                 initial={{ opacity: 0, x: -20 }}
@@ -192,9 +298,25 @@ function App() {
                   sidebarOpen={sidebarOpen} 
                   onToggleSidebar={toggleSidebar}
                   onSwitchToChat={switchToChat}
+                  user={user}
                 />
               </motion.div>
-            )}
+            ) : currentView === 'admin' && isAdmin ? (
+              <motion.div
+                key="admin"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.3 }}
+                className="flex-1"
+              >
+                <AdminDashboard 
+                  user={user}
+                  onSwitchToChat={switchToChat}
+                  onSwitchToDashboard={switchToDashboard}
+                />
+              </motion.div>
+            ) : null}
           </AnimatePresence>
         </div>
 
@@ -222,8 +344,19 @@ function App() {
             </motion.div>
           )}
         </AnimatePresence>
+        </div>
+
+        {/* Global Search */}
+        <GlobalSearch
+          isOpen={isSearchOpen}
+          onClose={closeSearch}
+          onNavigate={(view) => {
+            setCurrentView(view);
+            closeSearch();
+          }}
+        />
       </div>
-    </div>
+    </ErrorBoundary>
   );
 }
 
