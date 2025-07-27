@@ -12,7 +12,7 @@ import GlobalSearch from './components/GlobalSearch';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from './firebase-config';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AdminService } from './services/AdminService';
+import AdminService from './services/AdminService';
 import { useGlobalSearch } from './hooks/useGlobalSearch';
 
 function App() {
@@ -31,8 +31,8 @@ function App() {
     persona: 'default'
   });
 
-  // Admin service instance
-  const adminService = new AdminService();
+  // Admin service instance (singleton)
+  const adminService = AdminService;
   
   // Global search hook
   const { isSearchOpen, openSearch, closeSearch } = useGlobalSearch();
@@ -60,12 +60,12 @@ function App() {
     const checkAdminStatus = async () => {
       if (user) {
         try {
-          const adminStatus = await adminService.checkAdminStatus(user);
-          setIsAdmin(adminStatus.isAdmin);
+          const isAdminUser = await adminService.isAdmin(user);
+          setIsAdmin(isAdminUser);
           
           // Auto-initialize admin if Joachima signs in
-          if (adminService.isAdminEmail(user.email) && !adminStatus.isInitialized) {
-            await adminService.initializeAdmin(user);
+          if (isAdminUser && user.email === 'joachimaross@gmail.com') {
+            await adminService.initializeJoachimaAdmin();
             setIsAdmin(true);
           }
         } catch (error) {
