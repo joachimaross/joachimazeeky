@@ -15,7 +15,8 @@
       "Bash(npm run build:*)",
       "Bash(mkdir:*)",
       "Bash(cp:*)",
-      "Bash(git pull:*)"
+      "Bash(git pull:*)",
+      "Bash(npm start)"
     ],
     "deny": []
   }

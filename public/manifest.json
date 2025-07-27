@@ -1,0 +1,122 @@
+{
+  "short_name": "Zeeky AI",
+  "name": "Zeeky AI - All-in-One Assistant Platform",
+  "description": "Your intelligent AI assistant for productivity, creativity, and automation",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "logo192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "logo512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "icon-144.png",
+      "type": "image/png",
+      "sizes": "144x144",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-256.png",
+      "type": "image/png",
+      "sizes": "256x256",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-384.png",
+      "type": "image/png",
+      "sizes": "384x384",
+      "purpose": "any"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#0066FF",
+  "background_color": "#000000",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "categories": ["productivity", "utilities", "education", "business"],
+  "lang": "en-US",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "related_applications": [],
+  "screenshots": [
+    {
+      "src": "screenshot-desktop.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "platform": "wide",
+      "label": "Zeeky AI Desktop Interface"
+    },
+    {
+      "src": "screenshot-mobile.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "platform": "narrow",
+      "label": "Zeeky AI Mobile Interface"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "New Chat",
+      "short_name": "Chat",
+      "description": "Start a new conversation with Zeeky",
+      "url": "/chat",
+      "icons": [{ "src": "icon-chat.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "View your AI dashboard",
+      "url": "/dashboard",
+      "icons": [{ "src": "icon-dashboard.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Voice Assistant",
+      "short_name": "Voice",
+      "description": "Use voice commands with Zeeky",
+      "url": "/voice",
+      "icons": [{ "src": "icon-voice.png", "sizes": "96x96" }]
+    }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "files",
+          "accept": ["image/*", "text/*", ".pdf", ".doc", ".docx"]
+        }
+      ]
+    }
+  },
+  "protocol_handlers": [
+    {
+      "protocol": "web+zeeky",
+      "url": "/handler?cmd=%s"
+    }
+  ],
+  "handle_links": "preferred",
+  "launch_handler": {
+    "client_mode": ["navigate-existing", "navigate-new"]
+  },
+  "display_override": ["window-controls-overlay", "minimal-ui"],
+  "edge_side_panel": {
+    "preferred_width": 400
+  }
+}
