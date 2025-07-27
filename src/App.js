@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Dashboard from './pages/Dashboard';
 import Sidebar from './components/Sidebar';
-import HologramAvatar from './components/HologramAvatar';
+import SimpleAvatar from './components/SimpleAvatar';
 import SignIn from './components/SignIn';
 import ChatBar from './components/ChatBar';
 import ConversationDisplay from './components/ConversationDisplay';
@@ -175,8 +175,8 @@ function App() {
 
           {/* Main Content Area */}
           <div className="flex-1 flex flex-col relative">
-            {/* Holographic Avatar */}
-            <HologramAvatar
+            {/* AI Avatar */}
+            <SimpleAvatar
               isListening={avatarState.isListening}
               isSpeaking={avatarState.isSpeaking}
               emotion={avatarState.emotion}

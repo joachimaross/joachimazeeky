@@ -16,7 +16,10 @@
       "Bash(mkdir:*)",
       "Bash(cp:*)",
       "Bash(git pull:*)",
-      "Bash(npm start)"
+      "Bash(npm start)",
+      "Bash(touch:*)",
+      "Bash(npm ci:*)",
+      "Bash(node:*)"
     ],
     "deny": []
   }
