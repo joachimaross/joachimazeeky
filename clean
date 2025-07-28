@@ -1,0 +1,4 @@
+# Nuclear option - completely clean and rebuild
+git rm -rf node_modules
+git commit -m "Clean node_modules"
+git push origin main
