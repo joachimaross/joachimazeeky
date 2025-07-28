@@ -9,7 +9,7 @@ import {
   FiRss, 
   FiBriefcase, 
   FiSettings,
-  FiFolderOpen,
+  FiFolder,
   FiSun,
   FiMoon,
   FiX,
@@ -171,7 +171,7 @@ const Sidebar = ({
             </span>
           </button>
           <button className="flex items-center justify-center space-x-2 p-3 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-800 transition-all">
-            <FiFolderOpen size={16} />
+            <FiFolder size={16} />
             <span className="text-sm font-medium">Files</span>
           </button>
         </div>

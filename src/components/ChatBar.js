@@ -414,7 +414,7 @@ const ChatBar = ({ onMessageSent, onAvatarStateChange }) => {
           ) : (
             <FiMic size={20} />
           )}
-        </button>
+        </motion.button>
 
         {/* Send Button */}
         <motion.button
