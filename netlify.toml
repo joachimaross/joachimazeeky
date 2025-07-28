@@ -3,8 +3,9 @@
 
 [build]
   # Build command and directory
+  base = "client"
   command = "npm run build"
-  publish = "build"
+  publish = "client/build"
   
   # Environment variables
   [build.environment]
