@@ -1,0 +1,3 @@
+git add src/services/ErrorReportingService.js netlify.toml
+git commit -m "Fix: Add React import in ErrorReportingService.js, clean up netlify.toml for safe Netlify build"
+git push
